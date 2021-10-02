@@ -8,6 +8,7 @@ import time
 
 from pose_estimation.keyframe_utils import fix_u
 from params import im_size,camera_matrix as cam_matrix,camera_matrix_inv as cam_matrix_inv,index_matrix,sigma_p
+
 # 3x3 Intrinsic camera matrix - converts 3x3 point in camera frame to
 # homogeneous repreentation of an image coordiante
 

@@ -26,6 +26,7 @@ import pangolin
 
 
 def find_cost(world_poses, poses, covariances,length):
+
 	cost = 0
 	j = 0
 	for j in range(length):
@@ -34,10 +35,12 @@ def find_cost(world_poses, poses, covariances,length):
 		wp = utils.tf_get_back_T(world_poses[j])
 		wp_prev = utils.tf_get_back_T(world_poses[j-1])
 		#temp = tf.transpose(tf.matmul(tf.matmul(tf.transpose(tf.linalg.inv(wp_prev)),tf.transpose(tf.cast(tf.linalg.inv(poses[j]),tf.float32))),tf.transpose(wp)))[:3]
-		temp = tf.matmul(tf.matmul(tf.linalg.inv(wp_prev),tf.cast(tf.linalg.inv(poses[j]),tf.float32)),wp) # world to j to i to world
+		# temp = tf.matmul(tf.matmul(tf.linalg.inv(wp_prev),tf.cast(tf.linalg.inv(poses[j]),tf.float32)),wp) # world to j to i to world
+		temp = tf.matmul(tf.matmul(tf.linalg.inv(wp_prev),tf.cast(np.linalg.pinv(poses[j]),tf.float32)),wp) # world to j to i to world
 		cost_t = utils.tf_get_min_rep(temp)
 		#temp = tf.matmul(tf.transpose(cost_t),tf.cast(tf.transpose(tf.linalg.inv(covariances[j])),tf.float32))
-		temp = tf.abs(tf.matmul(tf.matmul(cost_t,tf.cast(tf.linalg.inv(covariances[j]),tf.float32)),tf.transpose(cost_t)))
+		# temp = tf.abs(tf.matmul(tf.matmul(cost_t,tf.cast(tf.linalg.inv(covariances[j]),tf.float32)),tf.transpose(cost_t)))
+		temp = tf.abs(tf.matmul(tf.matmul(cost_t,tf.cast(np.linalg.pinv(covariances[j]),tf.float32)),tf.transpose(cost_t)))
 		cost = cost + temp
 	return cost
 
@@ -51,13 +54,12 @@ def create_point_cloud(keyframes,world_poses):
 
 def visualise(world_poses):
 
-
 	plt.show()
 	time.sleep(2)
 	plt.close(fig)
 
-
 def pose_graph_optimisation(keyframes):
+
 	'''
 	Optimises graph
 
@@ -67,7 +69,7 @@ def pose_graph_optimisation(keyframes):
 	Returns:
 		Points cloud
 	'''
-	tf.enable_eager_execution()
+	# tf.enable_eager_execution()  # not required for tf2
 
 	poses = []
 	world_poses = []
@@ -79,44 +81,50 @@ def pose_graph_optimisation(keyframes):
 			world_poses.append(poses[0])
 		else:
 			world_poses.append(np.matmul(utils.get_back_T(world_poses[j-1]),poses[j])) # Initial guess. Is a 4x4 matrix
-		world_poses[j] = tf.contrib.eager.Variable(utils.get_min_rep(world_poses[j][:3])) # 6 vector
+		# world_poses[j] = tf.contrib.eager.Variable(utils.get_min_rep(world_poses[j][:3])) # 6 vector
+		world_poses[j] = tf.Variable(utils.get_min_rep(world_poses[j][:3])) # 6 vector
 		covariances.append(i.C)
 		j += 1
 	#world_poses = tf.contrib.eager.Variable(world_poses)
-	optimizer = tf.train.AdamOptimizer(learning_rate = learning_rate)
+	# optimizer = tf.train.AdamOptimizer(learning_rate = learning_rate)
+
+	optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate = 0.5)
+	
 	loss = find_cost(world_poses,poses,covariances,j)
-	print()
-	print()
+
 	# j is length of array
 	i = -1
-	fig = plt.figure()
-	ax = Axes3D(fig)
+	# fig = plt.figure()
+	# ax = Axes3D(fig)
+
 	while(1):
 		i += 1
 		grads = find_grad(world_poses, poses,covariances,j)
 		#print("grads",grads,"\n\n")
 		#print("wp",world_poses,"\n\n")
-		optimizer.apply_gradients(zip(grads,world_poses),global_step = tf.train.get_or_create_global_step())
+		optimizer.apply_gradients(zip(grads,world_poses),global_step = tf.compat.v1.train.get_or_create_global_step())
 		loss = find_cost(world_poses,poses,covariances,j)
 		print(loss)
-		a = []
-		for i in range(len(world_poses)):
-			x,y,z = world_poses[i].numpy()[0],world_poses[i].numpy()[1],world_poses[i].numpy()[2]
-			a.append(ax.scatter(x,y,z))
-		plt.pause(0.05)
+		# a = []
+		# for i in range(len(world_poses)):
+		# 	x,y,z = world_poses[i].numpy()[0],world_poses[i].numpy()[1],world_poses[i].numpy()[2]
+			# a.append(ax.scatter(x,y,z))
+		# plt.pause(0.05)
 		#print(loss.numpy())
 		#plt.clf()
-		if abs(loss.numpy())<15:
+		if abs(loss.numpy())<2000:
 			break
-		for i in range(len(world_poses)):
-			a[i].remove()
-	plt.show()
-	print("done")
+		# for i in range(len(world_poses)):
+		# 	a[i].remove()
+	# plt.show()
 
-	#cloud = generate_point_cloud(keyframes,world_poses)
-	return 1#cloud
+	all_points_xyz = generate_point_cloud(keyframes,world_poses)
+
+
+	return all_points_xyz
 
 def test_pose_graph_optimisation():
+
 	keyframes = []
 	a = time.time()
 	T1_s = np.random.random(6)
@@ -141,6 +149,7 @@ def test_pose_graph_optimisation():
 	print(b-a)
 
 def cloud_for_vis(img,depth):
+	
 	index_matrix_2[:,2] = np.reshape(depth,(480*640))
 	points_in_cam_frame = index_matrix_2
 	#point_in_cam_frame = np.transpose(depth*index_matrix_2) # 3x480*640
@@ -156,7 +165,7 @@ def cloud_for_vis(img,depth):
 	pangolin.CreateWindowAndBind('Main', 640, 480)
 	gl.glEnable(gl.GL_DEPTH_TEST)
 
-# Define Projection and initial ModelView matrix
+	# Define Projection and initial ModelView matrix
 	scam = pangolin.OpenGlRenderState(pangolin.ProjectionMatrix(640, 480, 420, 420, 320, 240, 0.2, 100),pangolin.ModelViewLookAt(-2, 2, -2, 0, 0, 0, pangolin.AxisDirection.AxisY))
 	handler = pangolin.Handler3D(scam)
 
@@ -180,6 +189,8 @@ def cloud_for_vis(img,depth):
 		pangolin.DrawPoints(points)
 
 		pangolin.FinishFrame()
+
+
 
 
 

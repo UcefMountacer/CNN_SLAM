@@ -8,6 +8,7 @@ import numpy as np
 import math
 
 from pose_estimation.config import *
+from params import im_size
 
 
 class Keyframe:
@@ -28,7 +29,6 @@ def isRotationMatrix(R):
     I = np.identity(3, dtype=R.dtype)
     n = np.linalg.norm(I - shouldBeIdentity)
     return n < 1e-6
-
 
 def extract_angles(R):
     '''
@@ -71,8 +71,6 @@ def get_min_rep(T):
     T_vect[3:6] = angles
     return T_vect
 
-
-
 def eulerAnglesToRotationMatrix(theta):
     '''
     Converts rotation angles about x,y and z axis to a rotation matrix
@@ -94,7 +92,6 @@ def eulerAnglesToRotationMatrix(theta):
     R = np.dot(R_z, np.dot(R_y, R_x))
 
     return R
-
 
 def fix_u(u_prop):
     '''
@@ -130,7 +127,6 @@ def get_back_T(T_fl):
 
 def get_delD(D):
     return 0.01  # Change later to calculate based on input depth map
-
 
 def huber_norm(x):
     '''

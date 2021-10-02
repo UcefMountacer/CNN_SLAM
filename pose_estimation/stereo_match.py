@@ -252,17 +252,22 @@ def stereo_match(frame1, frame2, T1, T2):
     rel_T = rel_T[:3]
     E = get_essential_matrix(rel_T)
     F = np.matmul(camera_matrix_inv.T, np.matmul(E, camera_matrix_inv))  # Fundamental Matrix
-    #frame_rect_1, frame_rect_2, rect_rel_T = rectify_frames(frame1, frame2, F, rel_T)
-    frame_rect_1,frame_rect_2 = cv2.StereoRectify(camera_matrix,camera_matrix,imageSize = im_size,R = rel_T[:3,:3],T = rel_T[:3,3])
-    cv2.imshow("adwadaw",frame_rect_1)
+    frame_rect_1, frame_rect_2, rect_rel_T = rectify_frames(frame1, frame2, F, rel_T)
+    
+    # find rectifications parameters
+    # frame_rect_1,frame_rect_2,_,_,_,_,_ = cv2.stereoRectify(cameraMatrix1=camera_matrix,cameraMatrix2=camera_matrix,imageSize = im_size,R = rel_T[:3,:3],T = rel_T[:3,3],distCoeffs1=None, distCoeffs2=None)
+    # perform rectification
+
+    
+    # cv2.imshow("adwadaw",frame_rect_1)
     frame_rect_1 = np.transpose(frame_rect_1.astype(np.uint8))
     frame_rect_2 = np.transpose(frame_rect_2.astype(np.uint8))
     #disparity_map = five_pixel_match(frame1, frame2)  # Disparity map
     stereo = cv2.StereoBM_create(numDisparities=16, blockSize=7)
     disparity_map = stereo.compute(frame_rect_1,frame_rect_2)
     depth_map = depth_from_disparity(disparity_map, rect_rel_T)
-    plt.imshow(disparity_map,cmap = 'gray')
-    plt.show()
+    # plt.imshow(disparity_map,cmap = 'gray')
+    # plt.show()
     return depth_map
 
 

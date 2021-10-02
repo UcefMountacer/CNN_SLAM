@@ -18,7 +18,6 @@ import pose_estimation.optimiser as optimiser
 import pose_estimation.depth_map_fusion as depth_map_fusion
 from pose_estimation.stereo_match import *
 from params import camera_matrix as cam_matrix,camera_matrix_inv as cam_matrix_inv,sigma_p
-#import monodepth_infer.monodepth_single as monodepth
 
 def get_initial_pose():
     '''
@@ -247,6 +246,7 @@ def loss_fn_for_jack(uu, frame, cur_keyframe, T_s):
     return np.array(cost) 
 
 def loss_fn(uu, frame, cur_keyframe, T_s):
+
     T = get_back_T(T_s)
     cost = calc_cost(uu, frame, cur_keyframe, T,1)
     cost = np.sum(cost)
@@ -318,9 +318,11 @@ ratio_residual_uncertainty_v = np.vectorize(
 def minimize_cost_func(u, frame, cur_keyframe, 
     variance = 0.01,
     mean = 5.0,
-    learning_rate = 0.1,
-    max_iter= 100,
-    loss_bound = 0.1):
+    learning_rate = 0.3,
+    max_iter= 2,
+    loss_bound = 0.5):
+
+
     frame = frame.astype(np.float64)
     cur_keyframe.F.astype(np.float64)
 
@@ -340,6 +342,7 @@ def minimize_cost_func(u, frame, cur_keyframe,
     i = 0
 
     while True:  # Change later
+
         loss = loss_fn(u, frame, cur_keyframe, T_s)
         print("loss old:", loss)
         grads = grad_fn(u, frame, cur_keyframe, T_s)
@@ -352,6 +355,7 @@ def minimize_cost_func(u, frame, cur_keyframe,
         # Stopping condtions
         if (loss < loss_bound) or (i == max_iter):# or (abs(np.max(grads)) > 10000):
             break
+
     print(loss_fn(u, frame, cur_keyframe, T_s))
     C = find_covariance_matrix(u,frame,cur_keyframe,T_s)
     return get_back_T(T_s), C,loss_fn(u, frame, cur_keyframe, T_s)
